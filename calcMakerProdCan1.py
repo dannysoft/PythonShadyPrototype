@@ -13,58 +13,50 @@ tmpAnswerOnly = []
 #answer, some place holder text and an
 #"actual answer" like value.
 twentyCorrectAnswersNOT = []
-
-
-'''Generate a calculation with two operands using one of the 7 basic arithmetic operators.'''
-def RoundToRequiredAccuracy(floatnum = 0, decimalplaces = 0,floatnumlower = 10,floatnumupper = 1000):
-    moreQs = "y"
-    if decimalplaces == 0:
-        decimalplaces = 2 #default to rounding to two decimal places.
-        
-    while moreQs.lower() == "y":
-        decimalplacesQ = decimalplaces + rnd.randint(1,3)
-        if floatnum == 0:
-            floatnum = round(rnd.uniform(floatnumlower,floatnumupper),decimalplacesQ)
-        #end if
-        ansActual = round(floatnum,decimalplaces)
-        
-        print("ansActual = ",ansActual,type(ansActual))
-        #prompt user for answer.
-        validInput = False
-        while not validInput:
-            ansEntered = input("Round this value {} to {} decimal places: ".format(floatnum,decimalplaces))
-            validInput = ansEntered.isnumeric() or isfloat(ansEntered) 
-        #end while
-        print("Correct!") if ansEntered == str(ansActual) else print("Wrong :-(")
-        moreQs = input("More questions? (y/n): ").lower()
-        floatnum = 0
-    #end while
-#def end
+fortyPotentialAnswers = []
 
 '''Get oprator and operands range for a two operand calculation'''
 def GetOperatorAndOperandRanges(operatorIndex = -1):
-    operator = arithOperators[operatorIndex] if operatorIndex > 0 else arithOperators[rnd.randint(0,6)]
+    operator = arithOperators[operatorIndex] if operatorIndex >= 0 else arithOperators[rnd.randint(0,6)]
     
     if operator == "+": return (operator,0,100)     #+	Addition	x + y   
     if operator == "-": return (operator,0,100)     #-	Subtraction	x - y   
     if operator == "*": return (operator,10,99)     #*	Multiplication	x * y    
     if operator == "/": return (operator,10,100)    #/	Division	x / y    
     if operator == "%": return (operator,10,40)     #%	Modulus	x % y    
-    if operator == "**": return (operator,0,10)     #**	Exponentiation	x ** y   
+    if operator == "**": return (operator,0,5)      #**	Exponentiation	x ** y   
     if operator == "//": return (operator,10,100)   #//	Floor division	x // y
 
 #def end
 
+def MakeAnswerLike(actualAnswer,tmpAnswerOnly):
+    
+    randomNonAnswer = actualAnswer + rnd.randint(1,20)* (-1,1)[rnd.randint(0,1)]
+    #Make sure current random non answer is not present in the actual answers list.
+    while randomNonAnswer in tmpAnswerOnly:
+        randomNonAnswer = MakeAnswerLike(actualAnswer,tmpAnswerOnly)
+    #end while
+
+    return randomNonAnswer
+#def end
+
 '''Generate a calculation with two operands using one of the 7 basic arithmetic operators.'''
-def Generate2OperandsQuestion(blnactualAnswer = True, operatorIndex = -1):
-    if blnactualAnswer:
+def Generate40PotentialQnA(operatorIndex = -1):
+    global fortyPotentialAnswers
+    global tmpAnswerOnly
+    fortyPotentialAnswers.clear()
+    tmpAnswerOnly.clear()
+    strCalc = ""
+    ansActual = 0
+    
+    for i in range(20):
         #get operator and oerand ranges; returned in tuple.
         calctmp = GetOperatorAndOperandRanges(operatorIndex)
- 
+     
         #generate operand values.
         op1 = rnd.randint(calctmp[1],calctmp[2])
         op2 = rnd.randint(calctmp[1],calctmp[2])
-        
+            
         #get calculation answer.
         if calctmp[0] == "+": ansActual = op1 + op2
         if calctmp[0] == "-": ansActual = op1 - op2
@@ -76,118 +68,55 @@ def Generate2OperandsQuestion(blnactualAnswer = True, operatorIndex = -1):
 
         tmpAnswerOnly.append(ansActual) #Only populate for actual answers.
         strCalc = str(op1) + calctmp[0] + str(op2) + " = "
-    #end if      
-    
-    if not blnactualAnswer:
-        #On this iteration / call we are constructing a list of non-answers.
-        randomNonAnswer = rnd.randint(100,1000)        
-        if randomNonAnswer in tmpAnswerOnly:
-            currentNonAnswerIsDuplicate = True
-            while currentNonAnswerIsDuplicate:
-                offsetAnswer = randomNonAnswer + rnd.randint(1,10)* (-1,1)[rnd.randint(0,1)]
-                currentNonAnswerIsDuplicate = (offsetAnswer in tmpAnswerOnly)
-            #end while
-            randomNonAnswer = offsetAnswer
-        #end if
-        strCalc = "non-answer"
-        ansActual = randomNonAnswer
-    #end if
 
-    return [blnactualAnswer,strCalc,ansActual]
-#def end
-    
-def Generate20Questions(blnactualAnswer,operatorIndex):
-    Questions = []
-    for i in range(20):          
-        Questions.append(Generate2OperandsQuestion(blnactualAnswer,operatorIndex))
+        #Populate list of actual answers and non-answers    
+        fortyPotentialAnswers.append([True,strCalc,ansActual])
+        randomNonAnswer = MakeAnswerLike(ansActual, tmpAnswerOnly)
+        fortyPotentialAnswers.append([False,"randomNonAnswer",randomNonAnswer])
     #end for
-    return Questions
+    return fortyPotentialAnswers
 #def end
 
-operatorIndex = -1
-numberOfQuestionSets = 1
-def menu():
-    print("Enter 1 to try another set of 20 random questions.")
-    print("Enter 2 to choose a particular operator for another set of 20 random questions.")
-    print("Enter 3 for multiple sets for export (random operator)")
-    print("Enter 4 for multiple sets for export (chosen operator)")
-    print("Enter 0 to Quit")
-    calcChoice = input("Please choos 1, 2, 3, 4 [or 0 to quit]: ")
-    if calcChoice in ("2","4"):
-        strOperator = input("Entre of of the following arithmetic operators...\n'+','-','*','/','%','**','//': ")
-        global operatorIndex 
-        operatorIndex =  ("+","-","*","/","%","**","//").index(strOperator)
-    #end if
-    if calcChoice in ("3","4"):
-        global numberOfQuestionSets
-        numberOfQuestionSets = int(input("Enter the number of question sets you want for export: "))
-    #end if
 
-    return calcChoice
-#def end
-
-blnEndCalcs = False
-while not blnEndCalcs:
-    for setNumber in range(0,numberOfQuestionSets):
-        #Get list of twenty answers and twenty non-answers.
-        twentyCorrectAnswers = Generate20Questions(True,operatorIndex)
-        twentyCorrectAnswersNOT = Generate20Questions(False,operatorIndex)
-
-        print("\n")
-        #Display twenty questions to be answerd
-        qnum = 1
-        for i in range(10):
-            strQColLeft = twentyCorrectAnswers[i][1]
-            strQColRight = twentyCorrectAnswers[i+10][1]
-            print(" "*15,"{:>3})".format(qnum),"{:<10}".format(strQColLeft)," "*20, "{:>3})".format(qnum+10), "{:>10}".format(strQColRight))
-            qnum += 1
-
-        #Join lists of answers and non answers to make answer sear grid.
-        potential40answers = twentyCorrectAnswers + twentyCorrectAnswersNOT
-        #Shuff list of forty potential answers.
-        rnd.shuffle(potential40answers)
-
-        #Create just a list of numbers, each a potential answer
-        potential = []
-        for qpart in potential40answers:
-            potential.append(qpart[2])
-            
-
-        #Display grid of forty potential answers.
-        lowerIndex = 0
-        uppIndex = 8
-        for irow in range(0,5):
-            strRow = ""
-            #for i in range(lowerIndex, uppIndex):
-            for i in range(lowerIndex, uppIndex):
-                #print("i = ", i)
-                formattedPotential = potential[i]
-                if type(formattedPotential) == float:
-                    formattedPotential = "{:9.2}".format(formattedPotential)
-                else:
-                    formattedPotential = "{:9}".format(formattedPotential)
-                #end if
-                strRow = strRow + str(formattedPotential) + " "
-            #end for
-            lowerIndex += 8
-            uppIndex += 8
-            #The line below prints the actual row of eight potential answers.
-            print(strRow) 
-        #end for
-
-        instructions = '''
-        Above are 20 calculation for you to attempt.
-        The grid above shows 40 possible answers, i.e. 20 are corrct
-        20 are wrong.  Your job, calculate and match up your answer
-        with an answer from the grid.'''
-
-        print("\n"+instructions+"\n")
-    #end for 
-    blnEndCalcs = (menu() == "0")
-#end while
+'''Generate 20 random float numbers to round.'''
+def RoundToRequiredAccuracy(randomDP = True, decimalplaces = 0):
+    global fortyPotentialAnswers
+    global tmpAnswerOnly
+    fortyPotentialAnswers.clear()
+    tmpAnswerOnly.clear()
+    strCalc = ""
+    floatnum = 0
+    ansActual = 0
+    floatnumlower = 10
+    floatnumupper = 1000
+    numPartWhole = 0
+    numPartFraction = 0
+    
+    for i in range(20):
+        #Generate random number to be rounded.
+        numPartWhole = str(rnd.randint(100,999))
+        numPartFraction = str(rnd.randint(111,9999))
+        floatnum = float(numPartWhole + "." + numPartFraction)
         
+        if randomDP:
+            decimalplacesQ = rnd.randint(1,len(numPartFraction)-1)
+        else:
+            decimalplacesQ = decimalplaces
+        #end if
+   
+        #Determine actual answer.
+        ansActual = round(float(floatnum), int(decimalplacesQ))        
+        
+        #Create actual question string.
+        strCalc = str(floatnum) + " ({}d.p.)".format(decimalplacesQ)
 
-
-
-
-
+        #Populate list of actual answers and non-answers   
+        fortyPotentialAnswers.append([True,strCalc,ansActual])        
+        tmpAnswerOnly.append(ansActual) #Only populate for actual answers.
+        
+        #Make a unique non answer
+        randomNonAnswer = MakeAnswerLike(ansActual, tmpAnswerOnly)
+        fortyPotentialAnswers.append([False,"randomNonAnswer",randomNonAnswer])        
+    #end for
+    return fortyPotentialAnswers
+#def end
